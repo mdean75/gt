@@ -31,12 +31,14 @@ func main() {
 			huh.NewInput().
 				Title("Regex pattern match for tests to generate").
 				Value(&testRegex),
-			huh.NewInput().
-				Title("Please specify a file or directory containing the source").
-				Value(&path),
 		).WithHideFunc(func() bool {
 			return flag == "-all" || flag == "-exported"
 		}),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Please specify a file or directory containing the source").
+				Value(&path),
+		),
 		huh.NewGroup(
 			huh.NewSelect[string]().Title("Where to output tests").
 				Options(
@@ -48,27 +50,33 @@ func main() {
 
 	form.Run()
 
+	var cmdx strings.Builder
+
+	cmdx.WriteString("gotests")
+	if writeToFile != "" {
+		cmdx.WriteRune(' ')
+		cmdx.WriteString(writeToFile)
+	}
+
+	cmdx.WriteRune(' ')
+	cmdx.WriteString(flag)
+	if testRegex != "" {
+		cmdx.WriteRune(' ')
+		cmdx.WriteString(testRegex)
+	}
+
+	if path != "" {
+		cmdx.WriteRune(' ')
+		cmdx.WriteString(path)
+	}
+
 	huh.NewConfirm().
-		Title(fmt.Sprintf("issue command: `gotests %s %s %s %s`", flag, writeToFile, testRegex, path)).
+		Title(fmt.Sprintf("issue command: %s", cmdx.String())).
+		// Title(fmt.Sprintf("issue command: `gotests %s %s %s %s`", writeToFile, flag, testRegex, path)).
 		Affirmative("yes").
 		Negative("no").Value(&runCmd).Run()
 
 	if runCmd {
-		var cmdx strings.Builder
-
-		cmdx.WriteString("gotests")
-		cmdx.WriteRune(' ')
-		cmdx.WriteString(flag)
-		if testRegex != "" {
-			cmdx.WriteRune(' ')
-			cmdx.WriteString(testRegex)
-		}
-
-		if path != "" {
-			cmdx.WriteRune(' ')
-			cmdx.WriteString(path)
-		}
-
 		cmdArgs := strings.Split(cmdx.String(), " ")
 		fmt.Println("runnning command:", cmdArgs)
 		out, err := exec.Command(cmdArgs[0], cmdArgs[1:]...).CombinedOutput()
